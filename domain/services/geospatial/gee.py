@@ -10,11 +10,20 @@ building any ``ee`` object.
 import threading
 
 import ee
+import google.auth
 
 from semente.configs.config import config
 from semente.logging import log_debug
 
 _HIGHVOLUME_URL = "https://earthengine-highvolume.googleapis.com"
+# Default credentials must request these scopes explicitly: impersonated
+# credentials (gcloud auth application-default login
+# --impersonate-service-account) carry no scopes otherwise and Earth Engine
+# rejects their tokens.
+_SCOPES = [
+    "https://www.googleapis.com/auth/earthengine",
+    "https://www.googleapis.com/auth/cloud-platform",
+]
 _lock = threading.Lock()
 _initialized = False
 
@@ -27,7 +36,8 @@ def initialize_ee() -> None:
     """Initializes Earth Engine once per process (thread-safe, idempotent).
 
     Uses the service account key file when ``GEE_SERVICE_ACCOUNT`` and
-    ``GEE_KEY_FILE`` are set, otherwise default credentials, always with the
+    ``GEE_KEY_FILE`` are set, otherwise Application Default Credentials with
+    the Earth Engine scopes, always with the
     ``GEE_PROJECT`` project and the high-volume endpoint.
 
     Raises:
@@ -47,9 +57,12 @@ def initialize_ee() -> None:
         if not config.GEE_PROJECT:
             raise EarthEngineUnavailable("GEE_PROJECT is not set.")
         try:
-            credentials = None
             if config.GEE_SERVICE_ACCOUNT and config.GEE_KEY_FILE:
                 credentials = ee.ServiceAccountCredentials(config.GEE_SERVICE_ACCOUNT, config.GEE_KEY_FILE)
+            else:
+                # Application Default Credentials: the Cloud Run service
+                # account, or a local gcloud sign in (user or impersonated).
+                credentials, _ = google.auth.default(scopes=_SCOPES)
             ee.Initialize(credentials, project=config.GEE_PROJECT, opt_url=_HIGHVOLUME_URL)
         except Exception as error:
             raise EarthEngineUnavailable(f"Earth Engine initialization failed: {error}") from error

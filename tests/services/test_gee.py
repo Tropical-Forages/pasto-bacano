@@ -31,6 +31,26 @@ def test_initialize_is_idempotent(monkeypatch):
     assert kwargs["project"] == "proj"
 
 
+def test_default_credentials_request_earth_engine_scopes(monkeypatch):
+    monkeypatch.setattr(gee.config, "GEE_SERVICE_ACCOUNT", "", raising=False)
+    monkeypatch.setattr(gee.config, "GEE_KEY_FILE", "", raising=False)
+    requested = []
+
+    def fake_default(scopes=None):
+        requested.append(scopes)
+        return "adc", "proj"
+
+    calls = []
+    monkeypatch.setattr(gee.google.auth, "default", fake_default)
+    monkeypatch.setattr(gee.ee, "Initialize", lambda *args, **kwargs: calls.append((args, kwargs)))
+
+    gee.initialize_ee()
+
+    assert requested == [gee._SCOPES]
+    assert "https://www.googleapis.com/auth/earthengine" in gee._SCOPES
+    assert calls[0][0] == ("adc",)
+
+
 def test_missing_project_raises_unavailable(monkeypatch):
     monkeypatch.setattr(gee.config, "GEE_PROJECT", None, raising=False)
 

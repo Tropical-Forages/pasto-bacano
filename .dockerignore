@@ -1,0 +1,15 @@
+# Keep secrets, local state and build leftovers out of the container image.
+.env
+.env.*
+!.env.example
+*.json.key
+secrets/
+.venv/
+.git/
+tmp/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.db
+*.sqlite
