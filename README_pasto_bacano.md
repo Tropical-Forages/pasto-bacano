@@ -48,15 +48,31 @@ Pasto Bacano is the Time2Graze decision support system, focused on Colombia for 
 
 ### 2. Deploy to Cloud Run
 
-From the repository folder:
+From the repository folder. Settings are in `deploy/streamlit.env.yaml` and `deploy/agent.env.yaml` (project, model, bucket); edit them there, not in the command, because PowerShell breaks comma separated lists in `--set-env-vars`.
 
 ```shell
-gcloud run deploy pasto-bacano --source . --region REGION --service-account pasto-bacano@PROJECT_ID.iam.gserviceaccount.com --port 8501 --memory 2Gi --timeout 3600 --session-affinity --max-instances 1 --set-env-vars APP_ENV=development,GEE_PROJECT=PROJECT_ID --set-secrets GOOGLE_API_KEY=gemini-api-key:latest --no-allow-unauthenticated
+gcloud run deploy pasto-bacano --source . --region REGION --service-account pasto-bacano@PROJECT_ID.iam.gserviceaccount.com --port 8501 --memory 2Gi --timeout 3600 --session-affinity --max-instances 1 --env-vars-file deploy/streamlit.env.yaml --set-secrets GOOGLE_API_KEY=gemini-api-key:latest --no-allow-unauthenticated
 ```
 
 Open it with `gcloud run services proxy pasto-bacano --region REGION` and go to http://localhost:8080.
 
 On Cloud Run, Earth Engine uses the service account directly, so no key file is needed. For now sessions are kept inside the instance and are lost when it restarts; Cloud SQL will replace this.
+
+**Agent API (for the website).** Same image, second service: `PASTO_BACANO_SERVICE=api` makes `scripts/start.sh` start the API instead of Streamlit. First create a bucket for maps and reports and let the service account use it and sign links:
+
+```shell
+gcloud storage buckets create gs://PROJECT_ID-pasto-bacano-media --location REGION --uniform-bucket-level-access
+gcloud storage buckets add-iam-policy-binding gs://PROJECT_ID-pasto-bacano-media --member serviceAccount:pasto-bacano@PROJECT_ID.iam.gserviceaccount.com --role roles/storage.objectAdmin
+gcloud iam service-accounts add-iam-policy-binding pasto-bacano@PROJECT_ID.iam.gserviceaccount.com --member serviceAccount:pasto-bacano@PROJECT_ID.iam.gserviceaccount.com --role roles/iam.serviceAccountTokenCreator
+```
+
+Then deploy:
+
+```shell
+gcloud run deploy pasto-bacano-agent --source . --region REGION --service-account pasto-bacano@PROJECT_ID.iam.gserviceaccount.com --port 8080 --memory 2Gi --timeout 300 --session-affinity --max-instances 1 --env-vars-file deploy/agent.env.yaml --set-secrets GOOGLE_API_KEY=gemini-api-key:latest --no-allow-unauthenticated
+```
+
+Test it with `gcloud run services proxy pasto-bacano-agent --region REGION`, then open http://localhost:8080/api/health. To connect the website, see Developing, section 5.
 
 ### 3. Run locally
 
@@ -112,9 +128,9 @@ No key file is needed: you sign in as the service account instead (service accou
 
 ## Developing
 
-### 1. Agent as an API endpoint (planned)
+### 1. Agent as an API endpoint
 
-**Status:** design only, not built yet. It adds a second way to run the same agent; the Streamlit setup above stays as it is, and Semente is not modified.
+**Status:** built and tested locally (web channel); not yet deployed. It adds a second way to run the same agent; the Streamlit setup stays as it is, and Semente is not modified.
 
 The same repository and container image run as two Cloud Run services, started with different commands:
 
@@ -146,22 +162,32 @@ flowchart LR
 
 The core services connect to the agent, not to the API or Streamlit, so both ways in can use them. TF Data Explorer is left out because the website links to it directly.
 
-**Endpoints**
+**Channels**, switched on with `PASTO_BACANO_CHANNELS` (comma separated, default `web`):
 
-- `POST /api/chat`: receives `{session_id, message, language}` and returns `{reply, attachments}`, the contract the Time2Graze website already uses.
-- `GET /api/health`: health check.
-- A2A (optional): Semente 0.4.1 already includes it; adding `a2a` to `channels` in `semente.yaml` exposes it on the same service.
-- WhatsApp webhook: mounted on the same service by Semente once the WhatsApp API is approved.
+- `web`: `POST /api/chat` receives `{session_id, message, language, location}` and returns `{reply, attachments}` (attachment types `image`, `document`, `video`), the contract the Time2Graze website already uses. Also `GET /api/health`.
+- `whatsapp`: Semente's webhook at `/whatsapp/webhook` (needs the `WHATSAPP_*` and `VALKEY_*` variables).
+- `a2a`: Semente's agent to agent endpoint at `/a2a`.
+
+**Code**
+
+- `app/main.py`: builds the web app with the enabled channels, all sharing one agent.
+- `app/api/`: the web channel: `router.py` (routes), `models.py` (website contract), `media.py` (attachments: Cloud Storage signed links when `PASTO_BACANO_MEDIA_BUCKET` is set, served by the API otherwise), `sessions.py` (`web:` session ids and locks), `auth.py` (optional `PASTO_BACANO_API_KEY`).
+- `tests/test_api.py`: tests with a fake agent.
+
+Run it locally (same `.env` as section 3), then call http://localhost:8080/api/chat:
+
+```shell
+uv run uvicorn app.main:create_app --factory --port 8080
+```
 
 **Design points**
 
 - **Access:** private service with Cloud Run IAM; the website calls it with an ID token, which it already supports.
 - **Maps and reports:** tools return images and PDFs as bytes. The API uploads them to Cloud Storage and returns short lived signed `https` links (the website only shows `https` links).
 - **Sessions:** SQLite in one instance at first, Cloud SQL later so the service can scale.
-- **Response time:** map and biomass answers can take 30 to 90 seconds (the website waits up to 90); streaming can come later.
-- **Language:** the agent already answers in the user's language; the `language` field is accepted and used as a hint.
-
-**What will be added:** `app/api.py` (the endpoints), `app/main.py` (the web app), tests, and a second deploy command that only changes the start command.
+- **Response time:** map and biomass answers can take 30 to 90 seconds (the website waits up to 240 s, `AGENT_TIMEOUT_MS`); streaming can come later.
+- **Language:** Spanish by default; the website's `language` field sets the default language of a new session.
+- **Model errors:** if Gemini fails (for example overloaded), the API answers HTTP 503 instead of showing the raw error.
 
 ### 2. Farm registration in Colombia (planned)
 
@@ -197,7 +223,18 @@ Semente runs the conversation and is not modified. What the agent knows and does
 | Skills | `domain/skills/livestock/` | Procedures: grazing thresholds, feed budget, Llanos and Caribe systems |
 | Guardrails | `domain/guardrails.py` | Colombian IDs (cédula, NIT) |
 | Terms | `domain/terms.md` | Pasto Bacano and Alliance/CIAT terms |
-| Manifest | `semente.yaml` | Name, models, channels, features |
+| Manifest | `semente.yaml` | Name, features |
+| Model | Environment (`.env` or `--set-env-vars`) | `PRIMARY_MODEL_PROVIDER` and `PRIMARY_MODEL_ID`, used by all agents |
+
+**Choosing the model.** `semente.yaml` has no `models` block, so every agent uses `PRIMARY_MODEL_PROVIDER` (`google` for both the Gemini API and Vertex AI) and `PRIMARY_MODEL_ID`. Change the model by changing that variable and restarting or redeploying. Leave `FALLBACK_MODEL_*` empty unless an Ollama server is running.
+
+| Model ID | Use |
+| --- | --- |
+| `gemini-3.5-flash-lite` | Default: cheap and fast |
+| `gemini-3.5-flash`, `gemini-3.8-flash` | Better at multistep tool use (register a farm, then map it) |
+| `gemini-3.1-pro-preview` | Strongest reasoning; slower and more expensive |
+
+Avoid `-latest` aliases (they change without notice) and the `tts`, `image`, `transcribe` and `robotics` variants (not chat models). The list comes from the Gemini API for this project; on Vertex AI check the same IDs in Model Garden.
 
 **Avoid**
 
@@ -271,7 +308,8 @@ The agent stays private; the website calls `POST /api/chat` with an ID token. A 
 
 **Pasto Bacano identity and Colombia**
 
-- [ ] Rename Pasto10 to Pasto Bacano in `domain/prompts/` and `domain/terms.md`
+- [x] Rename Pasto10 to Pasto Bacano in `domain/prompts/` and `domain/terms.md`
+- [ ] Review the terms of use (owner, contact, data processing) with the institution
 - [ ] Add Colombian test farms (Llanos Orientales, Caribe)
 - [ ] Register farms by pin and radius or uploaded polygon (Colombia has no CAR)
 - [ ] Use Colombian data and thresholds (MapBiomas Colombia, local grazing thresholds)
@@ -292,8 +330,10 @@ The agent stays private; the website calls `POST /api/chat` with an ID token. A 
 
 **Website and production**
 
-- [ ] Add a `/api/chat` endpoint so the Time2Graze website can talk to the agent
-- [ ] Deploy the Time2Graze website on Cloud Run, connected to the agent
+- [x] Add a `/api/chat` endpoint so the Time2Graze website can talk to the agent
+- [x] Deploy the agent API (`pasto-bacano-agent`) on Cloud Run
+- [x] Deploy the Time2Graze website on Cloud Run, connected to the agent (deploy steps in `project_time2graze/website/README.md`)
+- [ ] File uploads (GeoJSON, KML) through `/api/chat`
 - [ ] Cloud SQL for sessions and Cloud Storage for maps and reports, then `APP_ENV=production`
 
 **WhatsApp** (waits for IT approval of the WhatsApp API)

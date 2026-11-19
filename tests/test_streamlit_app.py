@@ -97,7 +97,7 @@ def _click_property(property_id):
 def test_use_property_registers_the_demo_registry_parcel():
     at, meta = _click_property("goias")
     assert meta["origin"] == "registered_boundary"
-    assert meta["source"] == "Pasto10 demo registry (synthetic)"
+    assert meta["source"] == "Pasto Bacano demo registry (synthetic)"
     assert meta["registry_id"].startswith("DEMO-")
     assert meta["name"] == f"Goiás - {meta['registry_id']}"
     text = at.success[0].value
@@ -141,7 +141,7 @@ def test_use_property_falls_back_to_a_chat_prompt(monkeypatch):
     next(b for b in at.button if b.key == "pasto10_use_property").click()
     at.run()
     assert not at.exception
-    assert fake.input.startswith("Register my test property 'Goiás'")
+    assert fake.input.startswith("Registra mi predio de prueba 'Goiás'")
     assert "_pending_prompt" not in at.session_state
 
 

@@ -17,6 +17,11 @@ RUN uv sync --frozen --no-cache
 
 COPY . .
 
-EXPOSE 8501
+# Strip Windows line endings in case the script was checked out with CRLF.
+RUN sed -i 's/\r$//' scripts/start.sh
 
-CMD ["streamlit", "run", "app/streamlit_app.py", "--server.port", "8501", "--server.address", "0.0.0.0"]
+EXPOSE 8501 8080
+
+# Streamlit chat by default (port 8501, as before); PASTO_BACANO_SERVICE=api
+# starts the agent API instead (see scripts/start.sh).
+CMD ["sh", "scripts/start.sh"]

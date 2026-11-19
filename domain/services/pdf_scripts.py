@@ -215,7 +215,7 @@ def render_document(story: Sequence[Flowable], title: str, footer: str = "") -> 
 
     document = SimpleDocTemplate(
         buffer, pagesize=A4, leftMargin=PAGE_MARGIN, rightMargin=PAGE_MARGIN, topMargin=14 * mm, bottomMargin=16 * mm,
-        title=title, author="Pasto10",
+        title=title, author="Pasto Bacano",
     )
     document.build(list(story), onFirstPage=draw_footer, onLaterPages=draw_footer)
     return buffer.getvalue()

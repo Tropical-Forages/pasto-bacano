@@ -39,7 +39,7 @@ def _candidate():
 
 
 def test_domain_spec_wires_dynamic_callables():
-    assert domain_spec.name == "Pasto10"
+    assert domain_spec.name == "Pasto Bacano"
     assert domain_spec.tools is get_tools
     assert domain_spec.instructions is get_instructions
 

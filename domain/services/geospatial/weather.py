@@ -32,7 +32,7 @@ MAX_TEMPERATURE_DAYS = 16
 REQUEST_TIMEOUT_SECONDS = 20
 COORDINATE_DECIMALS = 2
 CACHE_TTL_SECONDS = 3600
-USER_AGENT = "pasto10 (LAPIG/UFG; +https://github.com/lapig-ufg/pasto10)"
+USER_AGENT = "pasto-bacano (Time2Graze, CIAT; +https://github.com/Tropical-Forages/pasto-bacano)"
 
 _cache = SingleFlightCache(256, ttl=CACHE_TTL_SECONDS)
 _session = requests.Session()

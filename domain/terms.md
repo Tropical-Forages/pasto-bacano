@@ -1,10 +1,10 @@
 Terms of Use
 
 **1. Acceptance of the Terms**
-By accessing or using Pasto10, the user declares that they have read, understood and fully agree with these Terms of Use. If the user does not agree with any provision, they must stop using the service immediately.
+By accessing or using Pasto Bacano, the user declares that they have read, understood and fully agree with these Terms of Use. If the user does not agree with any provision, they must stop using the service immediately.
 
 **2. Service Description**
-Pasto10 is an open-science decision-support tool for pasture management developed by the Image Processing and Geoprocessing Laboratory (LAPIG) of the Federal University of Goiás (UFG). The service offers:
+Pasto Bacano is an open-science decision-support tool for pasture management of the Time2Graze project, built on Pasto10, developed by the Image Processing and Geoprocessing Laboratory (LAPIG) of the Federal University of Goiás (UFG). The service offers:
 * Interpretation of satellite-derived pasture maps produced by the Global Pasture Watch and Time2Graze initiatives (pasture extent, condition, productivity and dynamics over time);
 * Conversational interaction with an artificial intelligence assistant based on large language models;
 * Free access to information derived from open geospatial data.
@@ -21,10 +21,10 @@ The user agrees to:
 * Not use the data provided for illegal deforestation or any activity contrary to applicable environmental legislation.
 
 **5. Intellectual Property**
-The Pasto10 source code is distributed under the GPL-3.0-or-later license, as made available in its public repository. The map products used are provided by the Global Pasture Watch and Time2Graze initiatives and are subject to their respective licenses.
+The Pasto Bacano source code, like Pasto10, is distributed under the GPL-3.0-or-later license, as made available in its public repository. The map products used are provided by the Global Pasture Watch and Time2Graze initiatives and are subject to their respective licenses.
 
 **6. Limitation of Liability**
-Pasto10 is provided "as is". UFG, LAPIG and institutional partners:
+Pasto Bacano is provided "as is". UFG, LAPIG and institutional partners:
 * Do not guarantee uninterrupted or error-free availability of the service;
 * Are not responsible for decisions made based solely on the data provided by the platform;
 * Do not guarantee the absolute accuracy of satellite data, which is subject to atmospheric conditions and spatial and temporal resolution;

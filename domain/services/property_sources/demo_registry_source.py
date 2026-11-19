@@ -19,7 +19,7 @@ from domain.schemas.feature import FeatureMetadata
 from domain.services.property_sources import geometry_utils as geo
 
 DATA_FILE = Path(__file__).resolve().parents[2] / "data" / "demo_registry.geojson"
-SOURCE_NAME = "Pasto10 demo registry (synthetic)"
+SOURCE_NAME = "Pasto Bacano demo registry (synthetic)"
 LICENSE = "Synthetic illustrative data, no real property boundaries (CC0)"
 DEFAULT_SEARCH_RADIUS_M = 2000
 

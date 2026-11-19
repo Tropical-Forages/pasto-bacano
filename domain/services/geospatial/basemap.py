@@ -39,7 +39,7 @@ TILE_SIZE = 256
 # Equatorial radius of the WGS84 ellipsoid, the sphere used by Web Mercator.
 WEB_MERCATOR_RADIUS_METERS = 6_378_137.0
 WEB_MERCATOR_MAX_LATITUDE = 85.05112878
-USER_AGENT = "pasto10 (LAPIG/UFG; +https://github.com/lapig-ufg/pasto10)"
+USER_AGENT = "pasto-bacano (Time2Graze, CIAT; +https://github.com/Tropical-Forages/pasto-bacano)"
 # (connect, read) timeouts of a single tile request, in seconds.
 REQUEST_TIMEOUT = (3, 4)
 # Total time budget of build_basemap, shared by every provider tried.

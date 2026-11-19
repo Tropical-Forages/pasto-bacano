@@ -157,7 +157,7 @@ def test_fetch_tile_uses_session_with_user_agent_and_timeout(monkeypatch):
     assert captured["url"].endswith("/tile/3/2/5")
     assert captured["timeout"] == (3, 4)
     assert basemap._SESSION.headers["User-Agent"] == basemap.USER_AGENT
-    assert basemap.USER_AGENT == "pasto10 (LAPIG/UFG; +https://github.com/lapig-ufg/pasto10)"
+    assert basemap.USER_AGENT == "pasto-bacano (Time2Graze, CIAT; +https://github.com/Tropical-Forages/pasto-bacano)"
 
 
 def test_esri_attribution_text_is_the_official_two_lines():

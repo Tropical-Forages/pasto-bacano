@@ -44,7 +44,7 @@ def test_the_shipped_manifest_lists_the_sources_and_still_loads_in_semente():
     from semente.manifest import Manifest
 
     assert registry.enabled_keys() == ["demo_registry", "osm"]
-    assert Manifest.load(registry.MANIFEST_PATH).name == "pasto10"
+    assert Manifest.load(registry.MANIFEST_PATH).name == "pasto-bacano"
 
 
 def test_unknown_keys_are_ignored_and_custom_sources_can_be_registered(monkeypatch):

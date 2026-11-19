@@ -1,4 +1,4 @@
-name: pasto10
+name: pasto-bacano
 language: en
 domain_module: domain
 engine: agno
@@ -14,6 +14,6 @@ features:
   terms-acceptance:
     enable: true
     file: domain/terms.md
-models:
-  primary: { provider: google, id: gemini-3.5-flash-lite }
-  fallback: { provider: ollama, id: gemma4:31b-cloud }
+# No "models" block: every agent takes its model from the environment
+# (PRIMARY_MODEL_PROVIDER, PRIMARY_MODEL_ID and optional FALLBACK_MODEL_*),
+# so the model can be changed per deployment without editing this file.

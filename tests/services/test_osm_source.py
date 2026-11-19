@@ -164,7 +164,7 @@ def test_get_overpass_falls_back_to_the_second_mirror_with_an_identifiable_agent
     monkeypatch.setattr(requests, "post", post)
 
     assert osm_source.get_overpass("q") == {"elements": []}
-    assert [url for url, _, _ in seen] == list(osm_source.OVERPASS_URLS) and "pasto10" in seen[0][1]
+    assert [url for url, _, _ in seen] == list(osm_source.OVERPASS_URLS) and "pasto-bacano" in seen[0][1]
     assert seen[0][2] == (5, 30)
 
 

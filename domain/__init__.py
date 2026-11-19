@@ -29,7 +29,7 @@ if skills is None:
     log_warning("domain: no skills were loaded from domain/skills/livestock")
 
 domain_spec = DomainSpec(
-    name="Pasto10",
+    name="Pasto Bacano",
     tools=get_tools,
     skills=skills,
     guardrails=guardrails,

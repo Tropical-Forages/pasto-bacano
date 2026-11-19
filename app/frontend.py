@@ -338,7 +338,7 @@ def configure_page():
     Streamlit call of the entrypoint; works on every rerun because the original
     function is kept at module level.
     """
-    _set_page_config(page_title="Pasto10", page_icon="🌾")
+    _set_page_config(page_title="Pasto Bacano", page_icon="🌾")
     st.set_page_config = lambda *args, **kwargs: None
 
 

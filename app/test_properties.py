@@ -77,8 +77,8 @@ def fallback_prompt(item: dict) -> str:
         str: The message used when the session cannot be written directly.
     """
     return (
-        f"Register my test property '{item['name']}' at latitude {item['latitude']}, "
-        f"longitude {item['longitude']} with a {item['radius_m']} m radius and confirm it."
+        f"Registra mi predio de prueba '{item['name']}' en latitud {item['latitude']}, "
+        f"longitud {item['longitude']} con un radio de {item['radius_m']} m y confírmalo."
     )
 
 
@@ -153,8 +153,8 @@ def register_test_property(item: dict, session_id: str) -> dict | None:
         # Semente 0.4 routes users back to the welcoming agent until the persona
         # has a name and a role, so a test property also completes the profile.
         state["user_persona"] = {
-            "name": "Pasto10 tester",
-            "role": "Produtor",
+            "name": "Pasto Bacano tester",
+            "role": "ganadero",
             "regionality": item.get("country") or "",
             "communication_preferences": [],
         }

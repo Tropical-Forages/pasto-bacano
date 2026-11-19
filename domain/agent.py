@@ -41,6 +41,8 @@ _agent_config = get_agent_config("single_agent")
 # The framework's UserPersona default is "Not yet known" ("Ainda não conhecido" in
 # older Semente releases): these prefixes detect it as "unknown".
 _SEMENTE_UNKNOWN_PREFIXES = ("ainda n", "not yet known")
+# Interface languages a channel may send (``preferred_language`` in the session state).
+_LANGUAGE_NAMES = {"es": "Spanish", "en": "English", "pt": "Portuguese"}
 
 
 def _candidate_features(session_state) -> list[Feature]:
@@ -263,4 +265,8 @@ def get_instructions(run_context: RunContext) -> str:
             ) if part
         )
 
-    return instructions + "\n\n" + _agent_config["output_contract"].strip()
+    instructions = instructions + "\n\n" + _agent_config["output_contract"].strip()
+    language = _LANGUAGE_NAMES.get(str(session_state.get("preferred_language") or "").lower()[:2])
+    if language:
+        instructions += "\n" + _agent_config["language_hint"].strip().format(language=language)
+    return instructions

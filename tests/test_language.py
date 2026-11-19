@@ -1,4 +1,4 @@
-"""Tests that keep the agent answering in the user's language (English by default).
+"""Tests that keep the agent answering in Spanish by default (other languages only when the user writes in them).
 
 The framework renders the user persona in Portuguese, which made the agent reply in Portuguese to English questions;
 the domain renders it in English instead and every state ends with an explicit language rule.
@@ -53,7 +53,7 @@ def test_technician_role_has_an_english_meaning():
 def test_every_state_ends_with_the_language_rule(state):
     instructions = get_instructions(_context(registration_state=state, user_persona={"name": "Ana", "role": "Produtor"}))
 
-    assert "LANGUAGE: always answer in the language of the user's latest message (English by default)" in instructions
+    assert "LANGUAGE: answer in Spanish by default" in instructions and "never change the language" in instructions
     assert "decimal point" in instructions and "YYYY-MM-DD" in instructions
 
 
@@ -76,3 +76,14 @@ def test_prompt_files_are_english(path):
 def test_dry_matter_is_never_abbreviated_in_portuguese():
     for path in PROMPTS.glob("*.yml"):
         assert not re.search(r"\bt MS\b|\bMS/ha\b", path.read_text(encoding="utf-8"))
+
+
+def test_interface_language_from_a_channel_becomes_the_default():
+    instructions = get_instructions(_context(preferred_language="en-US"))
+
+    assert "The user's interface language is English" in instructions
+
+
+def test_unknown_or_missing_interface_language_adds_no_hint():
+    assert "interface language" not in get_instructions(_context())
+    assert "interface language" not in get_instructions(_context(preferred_language="xx"))
