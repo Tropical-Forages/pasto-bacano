@@ -12,7 +12,9 @@ dependencies = [
     "pillow>=12.3.0",
     "reportlab>=5.0.1",
     "requests>=2.34.2",
-    "semente-agents",
+    # geo: lets Semente read uploaded farm boundaries (GeoJSON, KML, KMZ, zipped shapefile);
+    # mcp: client for the core services (Tropical Forages selection)
+    "semente-agents[geo,mcp]",
     "shapely>=2.2.0",
     "streamlit>=1.52.2,<1.53",
 ]

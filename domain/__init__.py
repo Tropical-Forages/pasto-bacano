@@ -23,6 +23,10 @@ from semente.skills import load_skills  # noqa: E402
 
 from domain.agent import get_instructions, get_tools  # noqa: E402
 from domain.guardrails import guardrails  # noqa: E402
+from domain.vertex_compat import install as install_vertex_compat  # noqa: E402
+
+# Lets tool results that carry images (area maps) work on Vertex AI too
+install_vertex_compat()
 
 skills = load_skills(Path(__file__).resolve().parent / "skills" / "livestock")
 if skills is None:

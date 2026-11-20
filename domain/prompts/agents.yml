@@ -5,9 +5,10 @@
 # defaults shipped by Semente (semente/configs/prompts/defaults/agents.yml);
 # any key missing here falls back to the default with a warning.
 #
-# Pasto Bacano is the Time2Graze pasture assistant, focused on Colombia. It is
-# built on Pasto10 (LAPIG/UFG); its knowledge comes from the Global Pasture
-# Watch and Time2Graze map products.
+# Pasto Bacano is the Time2Graze pasture assistant, focused on Colombia, made by
+# the Alliance Bioversity & CIAT (Alianza Bioversity & CIAT) based on Semente
+# and Pasto10; its knowledge comes from the Global Pasture Watch and Time2Graze
+# map products.
 # =============================================================================
 
 single_agent:

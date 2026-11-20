@@ -14,6 +14,7 @@ from semente.logging import log_error, log_info
 from starlette.concurrency import run_in_threadpool
 
 from app.api.auth import api_key_dependency
+from app.api.uploads import read_uploads
 from app.api.media import MediaStore, MemoryMediaStore, collect_attachments, media_store_from_env
 from app.api.models import ChatRequest, ChatResponse
 from app.api.sessions import channel_session_id, session_lock
@@ -79,10 +80,21 @@ def build_router(
         session_id = channel_session_id(CHANNEL, body.session_id)
         initial_state = {"preferred_language": body.language} if body.language else None
 
+        try:
+            uploads = read_uploads(body.files)
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from None
+        text = " ".join([body.agent_input() or uploads.caption(), *uploads.notes]).strip()
+
         def run_turn() -> Any:
             with session_lock(session_id):
                 return harness.run(
-                    user_id=session_id, session_id=session_id, input=body.agent_input(), session_state=initial_state
+                    user_id=session_id,
+                    session_id=session_id,
+                    input=text,
+                    images=uploads.images or None,
+                    files=uploads.files or None,
+                    session_state=initial_state,
                 )
 
         try:

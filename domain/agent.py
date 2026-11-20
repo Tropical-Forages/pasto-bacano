@@ -26,6 +26,7 @@ from domain.tools.property_tools import (
 )
 from domain.tools.biomass_tools import generate_biomass_map, generate_biomass_video, get_biomass_total
 from domain.tools.report_tools import generate_area_bulletin
+from domain.tools.forage_tools import forage_tools
 from domain.tools.pasture_tools import generate_pasture_map, get_pasture_area
 from domain.tools.weather_tools import (
     get_daily_precipitation_forecast,
@@ -166,6 +167,7 @@ def get_tools(run_context: RunContext) -> list:
         get_dry_season_onset_forecast,
         get_temperature_forecast,
         generate_area_bulletin,
+        *forage_tools(),
         Calculator(exclude_tools=["is_prime", "factorial"]),
     ]
 

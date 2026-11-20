@@ -168,3 +168,38 @@ def test_a_shared_location_becomes_the_whatsapp_registration_sentence():
 
     assert _client(harness).post("/api/chat", json=body).status_code == 200
     assert harness.calls[0]["input"] == "I want to register my property at coordinates Lat: 8.75 Long: -75.88."
+
+
+def _b64(data):
+    import base64
+
+    return base64.b64encode(data).decode()
+
+
+def test_uploaded_boundary_and_photo_reach_the_harness():
+    harness = FakeHarness()
+    body = {"session_id": "s1", "files": [
+        {"name": "finca.geojson", "mime_type": "application/geo+json", "content_base64": _b64(b'{"type": "FeatureCollection"}')},
+        {"name": "potrero.jpg", "mime_type": "image/jpeg", "content_base64": _b64(b"\xff\xd8 fake")},
+    ]}
+
+    assert _client(harness).post("/api/chat", json=body).status_code == 200
+    call = harness.calls[0]
+    assert [f.filename for f in call["files"]] == ["finca.geojson"]
+    assert call["input"] == "I am sending the boundary of my property in the attached file (finca.geojson)."
+    assert call["images"][0].mime_type == "image/jpeg" and call["images"][0].content == b"\xff\xd8 fake"
+
+
+def test_unsupported_file_becomes_a_note_for_the_agent():
+    harness = FakeHarness()
+    body = {"session_id": "s1", "message": "mira", "files": [{"name": "ruta.gpx", "content_base64": _b64(b"<gpx/>")}]}
+
+    assert _client(harness).post("/api/chat", json=body).status_code == 200
+    assert harness.calls[0]["files"] is None
+    assert "ruta.gpx" in harness.calls[0]["input"] and harness.calls[0]["input"].startswith("mira")
+
+
+def test_invalid_base64_is_rejected():
+    body = {"session_id": "s1", "files": [{"name": "finca.kml", "content_base64": "not base64!"}]}
+
+    assert _client(FakeHarness()).post("/api/chat", json=body).status_code == 422

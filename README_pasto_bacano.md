@@ -2,7 +2,7 @@
 
 This file covers Pasto Bacano only. The original Pasto10 documentation is in [README.md](README.md).
 
-Pasto Bacano is the Time2Graze decision support system, focused on Colombia for now, deployed on Google Cloud Run. Replace `PROJECT_ID` and `REGION` (for example `us-central1`) in the commands below. Blocks marked `shell` work in both PowerShell and bash; the others are specific to the shell they are marked with.
+Pasto Bacano is the Time2Graze decision support system, developed by the Alliance Bioversity & CIAT (Alianza Bioversity & CIAT) based on Semente and Pasto10. It is focused on Colombia for now and deployed on Google Cloud Run. Replace `PROJECT_ID` and `REGION` (for example `us-central1`) in the commands below. Blocks marked `shell` work in both PowerShell and bash; the others are specific to the shell they are marked with.
 
 ## Deployment
 
@@ -17,7 +17,7 @@ Pasto Bacano is the Time2Graze decision support system, focused on Colombia for 
 2. Enable the APIs:
 
    ```shell
-   gcloud services enable earthengine.googleapis.com run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com secretmanager.googleapis.com
+   gcloud services enable earthengine.googleapis.com run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com secretmanager.googleapis.com aiplatform.googleapis.com
    ```
 
 3. Register the project for Earth Engine at https://code.earthengine.google.com/register.
@@ -28,17 +28,18 @@ Pasto Bacano is the Time2Graze decision support system, focused on Colombia for 
    gcloud iam service-accounts create pasto-bacano
    ```
 
-5. Give it access to Earth Engine and to secrets:
+5. Give it access to Earth Engine, Vertex AI and secrets:
 
    ```shell
    gcloud projects add-iam-policy-binding PROJECT_ID --member serviceAccount:pasto-bacano@PROJECT_ID.iam.gserviceaccount.com --role roles/earthengine.viewer
    gcloud projects add-iam-policy-binding PROJECT_ID --member serviceAccount:pasto-bacano@PROJECT_ID.iam.gserviceaccount.com --role roles/serviceusage.serviceUsageConsumer
    gcloud projects add-iam-policy-binding PROJECT_ID --member serviceAccount:pasto-bacano@PROJECT_ID.iam.gserviceaccount.com --role roles/secretmanager.secretAccessor
+   gcloud projects add-iam-policy-binding PROJECT_ID --member serviceAccount:pasto-bacano@PROJECT_ID.iam.gserviceaccount.com --role roles/aiplatform.user
    ```
 
 6. Ask WRI to share the Time2Graze biomass asset (`projects/wri-lcl-time2graze/assets/ugpp_prod_10m_v1`) with `pasto-bacano@PROJECT_ID.iam.gserviceaccount.com`.
 
-7. Create a Gemini API key at https://aistudio.google.com/apikey, save it in a file `key.txt`, store it as a secret and delete the file:
+7. **Optional, only for the Gemini API instead of Vertex AI:** create a Gemini API key at https://aistudio.google.com/apikey, save it in a file `key.txt`, store it as a secret and delete the file:
 
    ```shell
    gcloud secrets create gemini-api-key --data-file=key.txt
@@ -48,15 +49,15 @@ Pasto Bacano is the Time2Graze decision support system, focused on Colombia for 
 
 ### 2. Deploy to Cloud Run
 
-From the repository folder. Settings are in `deploy/streamlit.env.yaml` and `deploy/agent.env.yaml` (project, model, bucket); edit them there, not in the command, because PowerShell breaks comma separated lists in `--set-env-vars`.
+From the repository folder. Settings are in `deploy/streamlit.env.yaml` and `deploy/agent.env.yaml` (project, model, Vertex AI, bucket); edit them there, not in the command, because PowerShell breaks comma separated lists in `--set-env-vars`.
 
 ```shell
-gcloud run deploy pasto-bacano --source . --region REGION --service-account pasto-bacano@PROJECT_ID.iam.gserviceaccount.com --port 8501 --memory 2Gi --timeout 3600 --session-affinity --max-instances 1 --env-vars-file deploy/streamlit.env.yaml --set-secrets GOOGLE_API_KEY=gemini-api-key:latest --no-allow-unauthenticated
+gcloud run deploy pasto-bacano --source . --region REGION --service-account pasto-bacano@PROJECT_ID.iam.gserviceaccount.com --port 8501 --memory 2Gi --timeout 3600 --session-affinity --max-instances 1 --env-vars-file deploy/streamlit.env.yaml --no-allow-unauthenticated
 ```
 
 Open it with `gcloud run services proxy pasto-bacano --region REGION` and go to http://localhost:8080.
 
-On Cloud Run, Earth Engine uses the service account directly, so no key file is needed. For now sessions are kept inside the instance and are lost when it restarts; Cloud SQL will replace this.
+On Cloud Run, Earth Engine and Vertex AI use the service account directly, so no key is needed. To use a Gemini API key instead, remove the four Vertex lines from the env file and add `--set-secrets GOOGLE_API_KEY=gemini-api-key:latest`. **Switching an existing service from the key to Vertex:** first run `gcloud run services update SERVICE --region REGION --remove-secrets GOOGLE_API_KEY`, because Cloud Run can't replace a secret with a plain value in one step. For now sessions are kept inside the instance and are lost when it restarts; Cloud SQL will replace this.
 
 **Agent API (for the website).** Same image, second service: `PASTO_BACANO_SERVICE=api` makes `scripts/start.sh` start the API instead of Streamlit. First create a bucket for maps and reports and let the service account use it and sign links:
 
@@ -69,7 +70,7 @@ gcloud iam service-accounts add-iam-policy-binding pasto-bacano@PROJECT_ID.iam.g
 Then deploy:
 
 ```shell
-gcloud run deploy pasto-bacano-agent --source . --region REGION --service-account pasto-bacano@PROJECT_ID.iam.gserviceaccount.com --port 8080 --memory 2Gi --timeout 300 --session-affinity --max-instances 1 --env-vars-file deploy/agent.env.yaml --set-secrets GOOGLE_API_KEY=gemini-api-key:latest --no-allow-unauthenticated
+gcloud run deploy pasto-bacano-agent --source . --region REGION --service-account pasto-bacano@PROJECT_ID.iam.gserviceaccount.com --port 8080 --memory 2Gi --timeout 300 --session-affinity --max-instances 1 --env-vars-file deploy/agent.env.yaml --no-allow-unauthenticated
 ```
 
 Test it with `gcloud run services proxy pasto-bacano-agent --region REGION`, then open http://localhost:8080/api/health. To connect the website, see Developing, section 5.
@@ -151,8 +152,8 @@ flowchart LR
     harness --> llm["Gemini / Vertex AI"]
     harness --> db["Sessions<br/>SQLite now, Cloud SQL later"]
     api --> gcs["Cloud Storage<br/>maps and reports"]
-    subgraph core["Core services (MCP, planned)"]
-        tfsel["Tropical Forages selection tool<br/>(next: worked in pasto-bacano_old)"]
+    subgraph core["Core services (MCP)"]
+        tfsel["Tropical Forages selection tool<br/>(connected: tf-selection-mcp)"]
         tfchat["Tropical Forages chatbot<br/>knowledge base"]
         pscan["PastureScan<br/>forage suitability"]
         cleaned["CLEANED<br/>methane, nitrogen, scenarios"]
@@ -164,7 +165,7 @@ The core services connect to the agent, not to the API or Streamlit, so both way
 
 **Channels**, switched on with `PASTO_BACANO_CHANNELS` (comma separated, default `web`):
 
-- `web`: `POST /api/chat` receives `{session_id, message, language, location}` and returns `{reply, attachments}` (attachment types `image`, `document`, `video`), the contract the Time2Graze website already uses. Also `GET /api/health`.
+- `web`: `POST /api/chat` receives `{session_id, message, language, location, files}` and returns `{reply, attachments}` (attachment types `image`, `document`, `video`), the contract the Time2Graze website already uses. Also `GET /api/health`.
 - `whatsapp`: Semente's webhook at `/whatsapp/webhook` (needs the `WHATSAPP_*` and `VALKEY_*` variables).
 - `a2a`: Semente's agent to agent endpoint at `/a2a`.
 
@@ -304,7 +305,7 @@ The agent stays private; the website calls `POST /api/chat` with an ID token. A 
 - [x] Configure the Google Cloud project and Earth Engine
 - [ ] Test locally (chat, maps, biomass, weather, in Spanish)
 - [ ] Test on Cloud Run
-- [ ] Switch from the Gemini API key to Vertex AI
+- [x] Switch from the Gemini API key to Vertex AI (`domain/vertex_compat.py` fixes tool results with images on Vertex)
 
 **Pasto Bacano identity and Colombia**
 
@@ -316,7 +317,8 @@ The agent stays private; the website calls `POST /api/chat` with an ID token. A 
 
 **Core services** (from pasto-bacano_old and the Time2Graze design)
 
-- [ ] Tropical Forages selection tool (MCP, already used in pasto-bacano_old): `https://tf-selection-tool-mcp-283437872147.us-central1.run.app/mcp`
+- [x] Tropical Forages selection tool: private Cloud Run service `tf-selection-mcp`, deployed from `tf_interactive_selection_tool/soft_api` with `--command python --args mcp_main.py`. The agent calls it with an ID token (`roles/run.invoker`) through `domain/services/forage_selection.py`; four tools in `domain/tools/forage_tools.py` (find a forage, list criteria, search, fact sheet), turned on by `PASTO_BACANO_FORAGE_MCP_URL`
+- [ ] Weather core service (`weather_mcp`): not an MCP server yet; port the Colombian sources (Datos Abiertos stations, IDEAM radar) as weather tools
 - [ ] Tropical Forages chatbot (knowledge base): confirm its API or MCP
 - [ ] TF Data Explorer: link from the website first, tool later
 - [ ] PastureScan (forage suitability)
@@ -333,7 +335,7 @@ The agent stays private; the website calls `POST /api/chat` with an ID token. A 
 - [x] Add a `/api/chat` endpoint so the Time2Graze website can talk to the agent
 - [x] Deploy the agent API (`pasto-bacano-agent`) on Cloud Run
 - [x] Deploy the Time2Graze website on Cloud Run, connected to the agent (deploy steps in `project_time2graze/website/README.md`)
-- [ ] File uploads (GeoJSON, KML) through `/api/chat`
+- [x] File uploads (GeoJSON, KML, KMZ, zipped shapefile, photos) through `/api/chat` (needs `semente-agents[geo]`)
 - [ ] Cloud SQL for sessions and Cloud Storage for maps and reports, then `APP_ENV=production`
 
 **WhatsApp** (waits for IT approval of the WhatsApp API)
